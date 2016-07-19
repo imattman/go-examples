@@ -1,2 +1,2 @@
-# learn-go-tdd
-Go language features illustrated via TDD
+# GoLang examples
+Go language use, features, idioms with some added tests.
