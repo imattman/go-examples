@@ -1,29 +1,18 @@
 // Sieve of Eratosthenes implemented in Go.
 
-package main
+package primes
 
 import (
 	"fmt"
+	"io"
 	"math"
-	"os"
-	"strconv"
 )
 
-const defaultLimit = 100
+func IntSqrt(n int) int {
+	return int(math.Sqrt(float64(n)))
+}
 
-func main() {
-	var limit = defaultLimit
-
-	if len(os.Args) > 1 {
-		x, err := strconv.Atoi(os.Args[1])
-		if err != nil || x < 1 {
-			fmt.Fprintf(os.Stderr, "Illegal argument: %q must be an integer greater than zero\n", os.Args[1])
-			os.Exit(1)
-		}
-
-		limit = x
-	}
-
+func TraditionalSieve(out io.Writer, limit int) {
 	// true values represent a composite/non-prime for the integer represented by the index
 	nums := make([]bool, limit+1)
 
@@ -32,7 +21,7 @@ func main() {
 	nums[1] = true
 
 	// optimization: no need to check candidates beyond square root of limit
-	limRoot := int(math.Sqrt(float64(limit)))
+	limRoot := IntSqrt(limit)
 
 	for i := 2; i <= limRoot; i++ {
 		if !nums[i] {
@@ -47,7 +36,7 @@ func main() {
 	// note: printing could be performed in-line above with each prime found
 	for i, disqualified := range nums {
 		if !disqualified {
-			fmt.Println(i)
+			fmt.Fprintln(out, i)
 		}
 	}
 }
