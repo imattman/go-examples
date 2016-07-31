@@ -15,7 +15,7 @@ const defaultLimit = 100
 
 func main() {
 	var algorithm string
-	flag.StringVar(&algorithm, "a", "sieve", "algorithm: {sieve|naive|filter|channel}")
+	flag.StringVar(&algorithm, "a", "sieve", "algorithm: {sieve|naive|filter|concurrent}")
 	flag.Parse()
 
 	var limit = defaultLimit
@@ -40,8 +40,7 @@ func main() {
 	case "filter":
 		fmt.Fprintf(os.Stderr, "Not yet implemented\n")
 		os.Exit(1)
-	case "channel":
-		fmt.Fprintf(os.Stderr, "Not yet implemented\n")
-		os.Exit(1)
+	case "concurrent":
+		primes.Concurrent(os.Stdout, limit)
 	}
 }
