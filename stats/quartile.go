@@ -13,7 +13,7 @@ func NewBoundedDataset(maxVal int) *BoundedDataset {
 }
 
 func (ds *BoundedDataset) Add(datapoints ...int) error {
-	maxAllowed := len(ds.data) - 1
+	maxAllowed := ds.maxAllowed()
 	for _, v := range datapoints {
 		if v < 0 {
 			return fmt.Errorf("illegal negative value %d", v)
@@ -27,6 +27,10 @@ func (ds *BoundedDataset) Add(datapoints ...int) error {
 	}
 
 	return nil
+}
+
+func (ds *BoundedDataset) maxAllowed() int {
+	return len(ds.data) - 1
 }
 
 func (ds *BoundedDataset) TotalCount() int {
@@ -60,4 +64,9 @@ func (ds *BoundedDataset) Mean() float64 {
 		return 0.0
 	}
 	return float64(ds.Sum()) / float64(ds.count)
+}
+
+func (ds *BoundedDataset) String() string {
+	return fmt.Sprintf("dataset(max: %d) total: %d, sum: %d, mean: %0.3f",
+		ds.maxAllowed(), ds.TotalCount(), ds.Sum(), ds.Mean())
 }
