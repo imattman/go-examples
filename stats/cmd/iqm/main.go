@@ -28,10 +28,12 @@ func main() {
 		in = f
 	}
 
-	dataset := stats.NewBoundedDataset(1000)
+	accum := stats.NewCompactAccumulator(1000)
 
 	scan := bufio.NewScanner(bufio.NewReader(in))
-	for scan.Scan() {
+	scan.Split(bufio.ScanWords)
+
+	for i := 1; scan.Scan(); i++ {
 		valStr := scan.Text()
 		val, err := strconv.Atoi(strings.TrimSpace(valStr))
 		if err != nil {
@@ -39,11 +41,14 @@ func main() {
 			continue
 		}
 
-		dataset.Add(val)
+		accum.Add(val)
+		if i > 3 {
+			fmt.Printf("%d: %0.2f\n", i, accum.Mean())
+		}
 	}
 	if scan.Err() != nil {
 		log.Fatalf("Error scanning input - %s", scan.Err())
 	}
 
-	fmt.Println("summary:", dataset)
+	fmt.Println("summary:", accum)
 }

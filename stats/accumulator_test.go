@@ -5,8 +5,26 @@ import (
 	"testing"
 )
 
-func TestExceedMax(t *testing.T) {
-	max := 10
+type factoryFunc func() Accumulator
+
+func testClear(t *testing.T, accFn factoryFunc) {
+	ac := accFn()
+
+	ac.Clear()
+	if 0 != ac.TotalCount() {
+		t.Errorf("Unexpected count %d after Clear()", ac.TotalCount())
+	}
+
+	ac.Add(1)
+	ac.Add(2)
+	ac.Add(3)
+	ac.Clear()
+	if 0 != ac.TotalCount() {
+		t.Errorf("Unexpected count %d after Clear()", ac.TotalCount())
+	}
+}
+
+func testExceedMax(t *testing.T, accFn factoryFunc, max int) {
 	tests := []struct {
 		val int
 		ok  bool
@@ -18,10 +36,9 @@ func TestExceedMax(t *testing.T) {
 		{val: 99, ok: false},
 	}
 
-	ds := NewBoundedDataset(max)
-
 	for _, test := range tests {
-		err := ds.Add(test.val)
+		ac := accFn()
+		err := ac.Add(test.val)
 		if (err == nil) != test.ok {
 			t.Errorf("Unexpected err of [max:%d] Add(%d) => %s",
 				max, test.val, err)
@@ -29,7 +46,7 @@ func TestExceedMax(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
+func testAdd(t *testing.T, accFn factoryFunc) {
 	tests := []struct {
 		vals []int
 	}{
@@ -41,26 +58,26 @@ func TestAdd(t *testing.T) {
 
 	for _, test := range tests {
 		// test add one at a time
-		ds := NewBoundedDataset(1000)
+		ac := accFn()
 		for _, v := range test.vals {
-			err := ds.Add(v)
+			err := ac.Add(v)
 			if err != nil {
 				t.Errorf("Unexpected error %s", err)
 			}
 		}
-		testVerifyDataset(t, ds, test.vals)
+		testVerifyDataset(t, ac, test.vals)
 
 		// test batch add
-		ds2 := NewBoundedDataset(1000)
-		err := ds2.Add(test.vals...)
+		ac = accFn()
+		err := ac.Add(test.vals...)
 		if err != nil {
 			t.Errorf("Unexpected error %s", err)
 		}
-		testVerifyDataset(t, ds2, test.vals)
+		testVerifyDataset(t, ac, test.vals)
 	}
 }
 
-func TestAllData(t *testing.T) {
+func testAllData(t *testing.T, accFn factoryFunc) {
 	tests := []struct {
 		vals []int
 	}{
@@ -71,22 +88,22 @@ func TestAllData(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ds := NewBoundedDataset(1000)
+		ac := accFn()
 		for _, v := range test.vals {
-			err := ds.Add(v)
+			err := ac.Add(v)
 			if err != nil {
 				t.Errorf("Unexpected error %s", err)
 			}
 		}
 
-		if ds.TotalCount() != len(test.vals) {
+		if ac.TotalCount() != len(test.vals) {
 			t.Errorf("Wrong number of data points; expected %d, actual %d",
-				len(test.vals), ds.TotalCount())
+				len(test.vals), ac.TotalCount())
 		}
 	}
 }
 
-func TestSum(t *testing.T) {
+func testSum(t *testing.T, accFn factoryFunc) {
 	tests := []struct {
 		vals     []int
 		expected int
@@ -99,16 +116,16 @@ func TestSum(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ds := NewBoundedDataset(100)
-		ds.Add(test.vals...)
-		if test.expected != ds.Sum() {
-			t.Errorf("Incorrect sum: expected %.4f, actual %.4f",
-				test.expected, ds.Sum())
+		ac := accFn()
+		ac.Add(test.vals...)
+		if test.expected != ac.Sum() {
+			t.Errorf("Incorrect sum: expected %d, actual %d",
+				test.expected, ac.Sum())
 		}
 	}
 }
 
-func TestMean(t *testing.T) {
+func testMean(t *testing.T, accFn factoryFunc) {
 	tests := []struct {
 		vals     []int
 		expected float64
@@ -120,23 +137,23 @@ func TestMean(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ds := NewBoundedDataset(100)
-		ds.Add(test.vals...)
-		if test.expected != ds.Mean() { // TODO: account for epsilon?
+		ac := accFn()
+		ac.Add(test.vals...)
+		if test.expected != ac.Mean() { // TODO: account for epsilon?
 			t.Errorf("Incorrect mean: expected %.4f, actual %.4f",
-				test.expected, ds.Mean())
+				test.expected, ac.Mean())
 		}
 	}
 }
 
-func testVerifyDataset(t *testing.T, ds *BoundedDataset, expData []int) {
-	if ds.TotalCount() != len(expData) {
+func testVerifyDataset(t *testing.T, ac Accumulator, expected []int) {
+	if ac.TotalCount() != len(expected) {
 		t.Errorf("Wrong number of data points; expected %d, actual %d",
-			len(expData), ds.TotalCount())
+			len(expected), ac.TotalCount())
 	}
 
-	if !reflect.DeepEqual(expData, ds.AllData()) {
-		t.Errorf("Data points do not match expected: %s, actual %s",
-			expData, ds.AllData())
+	if !reflect.DeepEqual(expected, ac.AllData()) {
+		t.Errorf("Data points do not match expected: %v, actual %v",
+			expected, ac.AllData())
 	}
 }
