@@ -23,18 +23,14 @@ func main() {
 	fmt.Printf("Captured out:\n%q\n", string(cap))
 }
 
-// CaptureStdOut takes a zero-argument function and invokes the function while
-// capturing all data written to stdout.
+// CaptureStdOut takes and invokes a zero-argument function.
+// Any data the function writes to stdout is captured and returned.
 func CaptureStdOut(f func()) ([]byte, error) {
-	oldOut := os.Stdout
-	defer func() {
-		os.Stdout = oldOut
-	}()
 
-	// Go doesn't use io.Writer for Stdout/Stderr
+	// Go doesn't use io.Writer for stdout/stderr
 	// so we have to jump through some hoops using an
 	// in-memory pipe to accomplish the capture
-	r, w, err := os.Pipe()
+	pr, pw, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
@@ -43,21 +39,23 @@ func CaptureStdOut(f func()) ([]byte, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// fire off the go-routine before the function is invoked and has any
-	// chance to write to stdout
+	// The two ends of the os.Pipe need to execute in separate goroutines.
+	// Launch a separate goroutine for the reader while the writer is used in this.
 	go func() {
-		buf, err = ioutil.ReadAll(r)
+		buf, err = ioutil.ReadAll(pr)
 		if err != nil {
 			log.Fatalf("error reading os.Pipe %q", err)
 		}
 
-		wg.Done() // signal that capture is done
+		wg.Done() // capture is done
 	}()
 
-	os.Stdout = w
-	f()
-	w.Close()
+	oldOut := os.Stdout
+	defer func() { os.Stdout = oldOut }() // replace regular stdout when done here
+	os.Stdout = pw
 
+	f()
+	pw.Close()
 	wg.Wait() // allow the capture routine to finish
 
 	return buf, nil
